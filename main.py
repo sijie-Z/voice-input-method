@@ -80,10 +80,21 @@ class TextPolisher:
 class CommandEngine:
     """语音指令引擎：匹配指令关键词并执行对应系统操作。"""
 
-    def __init__(self):
+    def __init__(self, mode_setter=None):
         # (trigger, type, description, handler)
         # type: "exact" 精确匹配 / "prefix" 前缀匹配
         self._commands = []
+
+        # --- 润色模式切换指令 ---
+        if mode_setter:
+            self._add_exact("润色模式", "切换为通用润色",
+                            lambda: mode_setter("general"))
+            self._add_exact("会议模式", "切换为会议纪要润色",
+                            lambda: mode_setter("meeting"))
+            self._add_exact("邮件模式", "切换为邮件格式润色",
+                            lambda: mode_setter("email"))
+            self._add_exact("朋友圈模式", "切换为社交轻松润色",
+                            lambda: mode_setter("social"))
 
         # --- 精确匹配指令 ---
         self._add_exact("换行", "模拟回车键",
@@ -181,10 +192,11 @@ class VoiceTyper:
         self._listener = None
         self._hot_words = hot_words or []
         self._model = None
-        self._cmd_engine = CommandEngine()
+        self._cmd_engine = CommandEngine(mode_setter=self.set_polish_mode)
         self._polisher = TextPolisher()
         self._polish_mode = polish_mode
         self.load_model()
+        print(f"当前润色模式：{self._mode_label(self._polish_mode)}")
 
     def load_model(self):
         """加载 Vosk 离线模型，失败时打印错误不崩溃。"""
@@ -228,6 +240,16 @@ class VoiceTyper:
         except Exception as e:
             print(f"识别异常: {e}")
             return ""
+
+    def _mode_label(self, mode):
+        labels = {"general": "通用", "meeting": "会议纪要", "email": "邮件", "social": "朋友圈"}
+        return labels.get(mode, mode)
+
+    def set_polish_mode(self, mode):
+        """切换润色模式，控制台反馈。"""
+        self._polish_mode = mode
+        msg = f"已切换到{self._mode_label(mode)}模式"
+        print(msg)
 
     def _type_text(self, text):
         """将文本通过剪贴板粘贴到当前活动窗口。"""
