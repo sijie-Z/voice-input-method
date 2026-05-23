@@ -1,0 +1,4 @@
+pynput
+vosk
+sounddevice
+pyperclip
