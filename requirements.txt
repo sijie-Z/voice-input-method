@@ -2,3 +2,4 @@ pynput
 vosk
 sounddevice
 pyperclip
+pyautogui
