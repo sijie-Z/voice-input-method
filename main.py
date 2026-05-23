@@ -1,11 +1,13 @@
 import json
 import os
+import time
 import wave
 import webbrowser
 import subprocess
 import urllib.parse
 
 import pyautogui
+import pyperclip
 from audio_recorder import AudioRecorder
 from pynput import keyboard
 
@@ -227,6 +229,18 @@ class VoiceTyper:
             print(f"识别异常: {e}")
             return ""
 
+    def _type_text(self, text):
+        """将文本通过剪贴板粘贴到当前活动窗口。"""
+        if not text.strip():
+            return
+        try:
+            pyperclip.copy(text)
+            time.sleep(0.1)
+            pyautogui.hotkey("ctrl", "v")
+            print(f"已上屏：{text}")
+        except Exception as e:
+            print(f"上屏失败: {e}")
+
     def stop_recording(self):
         """停止录音，保存 WAV，执行 Vosk 识别，先匹配指令再润色上屏。"""
         self.recorder.stop_recording()
@@ -247,9 +261,9 @@ class VoiceTyper:
                 print(f"指令执行失败 [{trigger}]: {e}")
             return
 
-        # 未命中指令，走润色流程
+        # 未命中指令，润色后上屏
         polished = self._polisher.polish(text, mode=self._polish_mode)
-        print(f"润色后文本：{polished}")
+        self._type_text(polished)
 
     def _on_press(self, key):
         try:
