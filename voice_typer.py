@@ -29,7 +29,6 @@ class VoiceTyper:
         self._polisher = TextPolisher()
         self._polish_mode = polish_mode
         self.load_model()
-        print(f"当前润色模式：{self._mode_label(self._polish_mode)}")
 
     def load_model(self):
         """加载 Vosk 离线模型，失败时打印错误不崩溃。"""
@@ -153,7 +152,13 @@ class VoiceTyper:
 
     def start(self):
         """启动键盘监听。"""
-        print("语音输入法已启动，按住右 Ctrl 开始录音，松开停止，按 Esc 退出")
+        print("=" * 40)
+        print("  语音输入法已启动")
+        print("  按住右 Ctrl 说话，松开自动上屏")
+        print(f"  当前润色模式：{self._mode_label(self._polish_mode)}")
+        print('  语音指令：说"换行""撤销""搜索 xxx""会议模式"等')
+        print("  按 Esc 退出")
+        print("=" * 40)
         with keyboard.Listener(
             on_press=self._on_press,
             on_release=self._on_release,
