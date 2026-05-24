@@ -1,6 +1,7 @@
 pynput
 vosk
 sounddevice
+numpy
 pyperclip
 pyautogui
 openai

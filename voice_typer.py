@@ -13,6 +13,12 @@ from text_polisher import TextPolisher
 class VoiceTyper:
     """语音输入控制器，将录音与键盘热键结合，集成 Vosk 离线识别、语音指令和 AI 润色。"""
 
+    COMMAND_KEYWORDS = [
+        "换行", "删除", "撤销", "保存", "复制", "粘贴",
+        "截屏", "锁屏", "搜索", "打开", "润色", "会议",
+        "邮件", "朋友圈", "记事本", "大写",
+    ]
+
     def __init__(self, hot_words=None, polish_mode="general"):
         self.recorder = AudioRecorder(sample_rate=16000)
         self._is_recording = False
@@ -50,10 +56,11 @@ class VoiceTyper:
 
             rec = KaldiRecognizer(self._model, wf.getframerate())
 
-            if self._hot_words:
-                rec.SetWords(True)
-                for word in self._hot_words:
-                    rec.AddWord(word)
+            rec.SetWords(True)
+            for word in self._hot_words:
+                rec.AddWord(word)
+            for word in self.COMMAND_KEYWORDS:
+                rec.AddWord(word)
 
             data = wf.readframes(wf.getnframes())
             rec.AcceptWaveform(data)
@@ -79,9 +86,14 @@ class VoiceTyper:
         print(msg)
 
     def _type_text(self, text):
-        """将文本通过剪贴板粘贴到当前活动窗口。"""
+        """将文本通过剪贴板粘贴到当前活动窗口，粘贴后恢复用户原有剪贴板内容。"""
         if not text.strip():
             return
+        original = ""
+        try:
+            original = pyperclip.paste()
+        except Exception:
+            pass
         try:
             pyperclip.copy(text)
             time.sleep(0.1)
@@ -89,6 +101,11 @@ class VoiceTyper:
             print(f"已上屏：{text}")
         except Exception as e:
             print(f"上屏失败: {e}")
+        finally:
+            try:
+                pyperclip.copy(original)
+            except Exception:
+                pass
 
     def stop_recording(self):
         """停止录音，保存 WAV，执行 Vosk 识别，先匹配指令再润色上屏。"""
