@@ -33,6 +33,7 @@ cd voice-input-method
 
 # 2. 安装依赖
 pip install -r requirements.txt
+├── tests/                  # 单元测试（26 个用例）
 
 # 3. 下载 Vosk 中文模型（约 42MB）
 python -c "
@@ -121,6 +122,7 @@ voice-input-method/
 ├── command_engine.py       # 语音指令引擎：16条命令的注册、匹配、执行
 ├── text_polisher.py        # AI 润色模块：四种模式 + DeepSeek API 调用
 ├── requirements.txt        # Python 依赖清单
+├── tests/                  # 单元测试（26 个用例）
 ├── models/                 # Vosk 离线模型文件
 ├── temp/                   # 临时音频文件
 └── README.md               # 项目文档
