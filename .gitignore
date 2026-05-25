@@ -33,3 +33,6 @@ backend/uploads/*
 
 # Logs
 *.log
+
+# Temp audio files
+temp/

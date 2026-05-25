@@ -40,9 +40,9 @@ class VoiceTyper:
             print(f"Vosk 模型加载失败: {e}，将使用纯录音模式")
 
     def _recognize(self, wav_path):
-        """对 WAV 文件执行 Vosk 识别，返回文本。"""
+        """对 WAV 文件执行 Vosk 识别，返回 (主文本, 备选文本列表)。"""
         if self._model is None:
-            return ""
+            return "", []
 
         from vosk import KaldiRecognizer
 
@@ -51,23 +51,42 @@ class VoiceTyper:
             if wf.getnchannels() != 1 or wf.getsampwidth() != 2:
                 print(f"不支持的音频格式: channels={wf.getnchannels()}, width={wf.getsampwidth()}")
                 wf.close()
-                return ""
+                return "", []
 
             rec = KaldiRecognizer(self._model, wf.getframerate())
+
+            # 启用备选结果，提高指令命中率
+            rec.SetMaxAlternatives(5)
             rec.SetWords(True)
 
             data = wf.readframes(wf.getnframes())
-            rec.AcceptWaveform(data)
+
+            if data:
+                rec.AcceptWaveform(data)
+            rec.AcceptWaveform(b"")  # 刷新识别器，确保所有帧被处理
+
             result = json.loads(rec.FinalResult())
-            text = result.get("text", "")
             wf.close()
-            return text
+
+            # 当启用 SetMaxAlternatives 时，Vosk 把主文本也放进 alternatives 数组
+            text = result.get("text", "")
+            alternatives = result.get("alternatives", [])
+            if not text and alternatives:
+                text = alternatives[0].get("text", "")
+
+            alt_texts = [
+                alt["text"]
+                for alt in alternatives[1:]  # 跳过头一个（已用作主文本）
+                if alt.get("text")
+            ]
+            return text, alt_texts
+
         except FileNotFoundError:
             print(f"识别失败: 找不到文件 {wav_path}")
-            return ""
+            return "", []
         except Exception as e:
             print(f"识别异常: {e}")
-            return ""
+            return "", []
 
     def _mode_label(self, mode):
         labels = {"general": "通用", "meeting": "会议纪要", "email": "邮件", "social": "朋友圈"}
@@ -104,22 +123,25 @@ class VoiceTyper:
     def stop_recording(self):
         """停止录音，保存 WAV，执行 Vosk 识别，先匹配指令再润色上屏。"""
         self.recorder.stop_recording()
-        text = self._recognize("temp/recorded.wav")
+        text, alternatives = self._recognize("temp/recorded.wav")
 
-        if not text:
+        if not text and not alternatives:
             print("识别结果：（无有效语音）")
             return
 
-        # 先匹配指令
-        matched = self._cmd_engine.match(text)
-        if matched:
-            trigger, handler, arg = matched
-            try:
-                self._cmd_engine.execute(handler, arg)
-                print(f"执行指令：{trigger}")
-            except Exception as e:
-                print(f"指令执行失败 [{trigger}]: {e}")
-            return
+        # 合并主文本和备选文本，去重
+        all_texts = list(dict.fromkeys([text] + alternatives))
+
+        for candidate in all_texts:
+            matched = self._cmd_engine.match(candidate)
+            if matched:
+                trigger, handler, arg = matched
+                try:
+                    self._cmd_engine.execute(handler, arg)
+                    print(f"执行指令：{trigger}（来源：{candidate}）")
+                except Exception as e:
+                    print(f"指令执行失败 [{trigger}]: {e}")
+                return
 
         # 未命中指令，润色后上屏
         polished = self._polisher.polish(text, mode=self._polish_mode)

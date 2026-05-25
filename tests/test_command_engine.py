@@ -44,10 +44,13 @@ class TestMatchExact:
             result = engine.match(trigger)
             assert result is not None, f"'{trigger}' 应该匹配成功"
 
-    def test_exact_match_whitespace_not_matched(self):
+    def test_exact_match_with_surrounding_whitespace(self):
+        """前后空格会被 _normalize 去掉，仍应匹配成功。"""
         engine = _make_engine()
-        assert engine.match("换行 ") is None or engine.match("换行 ")[0] != "换行"
-        assert engine.match(" 换行") is None or engine.match(" 换行")[0] != "换行"
+        result = engine.match("换行 ")
+        assert result is not None and result[0] == "换行"
+        result = engine.match("  换行  ")
+        assert result is not None and result[0] == "换行"
 
 
 class TestMatchPrefix:
@@ -75,6 +78,37 @@ class TestMatchPrefix:
         assert result is not None
         assert result[0] == "搜索"
         assert result[2] == "多余空格"
+
+
+class TestNormalize:
+    """_normalize 规范化测试。"""
+
+    def test_strip_fullwidth_punctuation(self):
+        engine = _make_engine()
+        assert engine.match("换行。") is not None
+        assert engine.match("换行，") is not None
+        assert engine.match("换行！") is not None
+
+    def test_prefix_without_space(self):
+        """Vosk 可能不会在指令后面加空格。"""
+        engine = _make_engine()
+        result = engine.match("搜索七牛云")
+        assert result is not None
+        assert result[0] == "搜索"
+        assert result[2] == "七牛云"
+
+    def test_short_text_fallback(self):
+        """≤12 字符的文本，指令嵌入在句子中也应匹配。"""
+        engine = _make_engine()
+        result = engine.match("帮我换行")
+        assert result is not None
+        assert result[0] == "换行"
+
+    def test_long_text_not_fooled_by_substring(self):
+        """超过 12 字符不启用短文本容错，防止误触。"""
+        engine = _make_engine()
+        result = engine.match("今天天气真好换行一下怎么样呢好")
+        assert result is None
 
 
 class TestMatchPriority:
