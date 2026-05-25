@@ -4,7 +4,7 @@
 
 ## 功能演示
 
-> [视频链接]（待替换为 B站/云盘链接）
+> [离线语音输入法演示视频](https://www.bilibili.com/video/BV14JGR6wExC/)
 
 ## 核心功能
 
