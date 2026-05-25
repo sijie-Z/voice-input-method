@@ -54,12 +54,7 @@ class VoiceTyper:
                 return ""
 
             rec = KaldiRecognizer(self._model, wf.getframerate())
-
             rec.SetWords(True)
-            for word in self._hot_words:
-                rec.AddWord(word)
-            for word in self.COMMAND_KEYWORDS:
-                rec.AddWord(word)
 
             data = wf.readframes(wf.getnframes())
             rec.AcceptWaveform(data)
