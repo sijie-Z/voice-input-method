@@ -5,3 +5,4 @@ numpy
 pyperclip
 pyautogui
 openai
+pytest
